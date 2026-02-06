@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { AppState, HazezezEntry } from '../types';
-import { Cloud, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Cloud, Plus, Trash2, Edit2, Save, X, Lock, Unlock } from 'lucide-react';
 import { formatDateArabic, TODAY_ISO } from '../lib/utils';
 
 interface Props {
@@ -13,6 +14,23 @@ export default function MeditationsTab({ state, onAddHazezez, onUpdateHazezez }:
   const [inputText, setInputText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+
+  // Lock State
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  
+  // Use state.meditationsPin (we assume it exists on AppState now)
+  const hasPin = !!state.meditationsPin;
+
+  const handleUnlock = () => {
+      if (pinInput === state.meditationsPin) {
+          setIsUnlocked(true);
+          setPinInput("");
+      } else {
+          alert("الرمز خطأ");
+          setPinInput("");
+      }
+  };
 
   const handleSave = () => {
     if (!inputText.trim()) return;
@@ -41,11 +59,48 @@ export default function MeditationsTab({ state, onAddHazezez, onUpdateHazezez }:
     setEditingId(null);
   };
 
+  // Render Locked State if PIN is set and not unlocked
+  if (hasPin && !isUnlocked) {
+      return (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-in zoom-in-95">
+              <div className="bg-sky-100 p-6 rounded-full mb-2">
+                  <Lock className="w-12 h-12 text-sky-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800">تأملاتك محمية</h3>
+              <p className="text-slate-500 text-sm">أدخل الرمز السري الخاص بالتأملات</p>
+              
+              <div className="flex justify-center gap-2">
+                <input 
+                type="password" 
+                maxLength={4}
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                className="text-center text-4xl tracking-[1em] w-48 border-b-2 border-sky-300 focus:outline-none focus:border-sky-600 bg-transparent py-2 font-bold text-sky-800"
+                placeholder="••••"
+                />
+             </div>
+             <button 
+                onClick={handleUnlock}
+                className="bg-sky-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-sky-200 hover:bg-sky-700 transition-colors"
+             >
+                فتح التأملات
+             </button>
+          </div>
+      )
+  }
+
   return (
     <div className="space-y-6 pb-20 md:pb-0 px-4 pt-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Cloud className="w-6 h-6 text-sky-500" />
-        <h2 className="text-2xl font-bold text-slate-800">تأملاتي (الهذيذ)</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+            <Cloud className="w-6 h-6 text-sky-500" />
+            <h2 className="text-2xl font-bold text-slate-800">تأملاتي (الهذيذ)</h2>
+        </div>
+        {hasPin && (
+            <button onClick={() => setIsUnlocked(false)} className="text-slate-400 hover:text-sky-600">
+                <Lock className="w-5 h-5" />
+            </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">

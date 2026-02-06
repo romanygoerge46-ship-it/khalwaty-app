@@ -112,6 +112,7 @@ export interface DonationRequest {
   username: string;
   amount: string;
   transactionRef: string;
+  method: string; // 'instapay' | 'wallet'
   date: string;
   status: 'pending' | 'approved' | 'rejected';
   adminNote?: string;
@@ -136,12 +137,13 @@ export interface AppNotification {
 }
 
 export interface AppState {
-  profile: UserProfile; // New Profile Data
+  profile: UserProfile; 
   logs: Record<string, DailyLog>;
   sacraments: SacramentsLog;
   stats: UserStats;
   dailyMessage: DailyMessage | null;
   hazezezHistory: HazezezEntry[];
+  meditationsPin: string | null; // New PIN for Meditations
   feelingsHistory: FeelingEntry[];
   adsRemoved: boolean;
   donationRequests: DonationRequest[]; 

@@ -1,30 +1,61 @@
+
 import React, { useState } from 'react';
-import { loginUser, registerUser } from '../lib/utils';
-import { Church, ArrowRight, Sparkles } from 'lucide-react';
+import { loginUser, registerUser, recoverPassword } from '../lib/utils';
+import { Church, ArrowRight, Sparkles, Key, HelpCircle, Lock } from 'lucide-react';
 
 interface Props {
   onLoginSuccess: (username: string) => void;
 }
 
 export default function AuthScreen({ onLoginSuccess }: Props) {
+  const [mode, setMode] = useState<'login' | 'register' | 'recover'>('login');
+  
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [recoveryAnswer, setRecoveryAnswer] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-        setError("من فضلك اكتب اسمك");
+    if (!name.trim() || !password.trim()) {
+        setError("يرجى ملء جميع البيانات");
         return;
     }
-
-    // Direct entry logic
-    // We try to register; if it exists, we just login.
-    // Since it's local device, names don't need to be unique globally, just acting as a profile ID.
-    const regResult = registerUser(name.trim());
-    if (regResult.success || regResult.message === "رقم الهاتف مسجل بالفعل") { // Reusing message logic roughly
-        loginUser(name.trim());
+    const res = registerUser(name.trim(), password, recoveryAnswer.trim());
+    if (res.success) {
         onLoginSuccess(name.trim());
+    } else {
+        setError(res.message);
     }
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = loginUser(name.trim(), password);
+    if (res.success) {
+        onLoginSuccess(name.trim());
+    } else {
+        setError(res.message);
+    }
+  };
+
+  const handleRecovery = (e: React.FormEvent) => {
+      e.preventDefault();
+      const res = recoverPassword(name.trim(), recoveryAnswer.trim());
+      if (res.success) {
+          setSuccessMsg(`كلمة المرور الخاصة بك هي: ${res.password}`);
+          setError(null);
+          setTimeout(() => {
+             setMode('login');
+             setSuccessMsg(null);
+             // Fill password automatically for convenience in this session
+             if(res.password) setPassword(res.password);
+          }, 5000);
+      } else {
+          setError(res.message);
+          setSuccessMsg(null);
+      }
   };
 
   return (
@@ -41,45 +72,79 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
             <p className="text-blue-100 text-sm font-medium opacity-90">مخدعك السري للصلاة والتأمل</p>
           </div>
           
-          {/* Decorative Elements */}
           <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-[60px] opacity-10 -mr-10 -mt-10 animate-pulse"></div>
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400 rounded-full blur-[50px] opacity-20 -ml-5 -mb-5"></div>
         </div>
 
         <div className="p-8">
-            <h2 className="text-xl font-bold text-slate-800 text-center mb-2">أهلاً بك 👋</h2>
-            <p className="text-slate-500 text-center text-sm mb-8">سجل اسمك لتبدأ رحلتك الروحية</p>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <h2 className="text-xl font-bold text-slate-800 text-center mb-2">
+                {mode === 'login' ? 'تسجيل الدخول' : mode === 'register' ? 'إنشاء حساب جديد' : 'استعادة الحساب'}
+            </h2>
+            
+            <form onSubmit={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleRecovery} className="space-y-4">
                 <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 block mr-1">الاسم</label>
                     <input 
                         type="text" 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 focus:outline-none transition-all text-slate-900 font-bold placeholder:text-slate-300 text-lg text-center"
-                        placeholder="اكتب اسمك هنا..."
+                        className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 focus:outline-none transition-all text-slate-900 font-bold"
+                        placeholder="اسم المستخدم"
                         autoFocus
                     />
                 </div>
 
-                {error && (
-                    <p className="text-xs text-red-500 font-bold text-center animate-bounce">{error}</p>
+                {mode !== 'recover' && (
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 block mr-1">كلمة المرور</label>
+                        <input 
+                            type="password" 
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 focus:outline-none transition-all text-slate-900 font-bold"
+                            placeholder="********"
+                        />
+                    </div>
                 )}
+
+                {(mode === 'register' || mode === 'recover') && (
+                     <div className="space-y-2 animate-in slide-in-from-top-2">
+                        <label className="text-xs font-bold text-slate-500 block mr-1 flex items-center gap-1">
+                             <HelpCircle className="w-3 h-3" /> سؤال الأمان: من هو شفيعك؟
+                        </label>
+                        <input 
+                            type="text" 
+                            value={recoveryAnswer}
+                            onChange={(e) => setRecoveryAnswer(e.target.value)}
+                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 focus:outline-none transition-all text-slate-900"
+                            placeholder="مثال: مارجرجس"
+                        />
+                    </div>
+                )}
+
+                {error && <p className="text-xs text-red-500 font-bold text-center animate-bounce">{error}</p>}
+                {successMsg && <p className="text-sm text-green-600 font-bold text-center bg-green-50 p-2 rounded-lg">{successMsg}</p>}
 
                 <button 
                     type="submit"
-                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-xl shadow-blue-200/50 transition-all active:scale-95 flex items-center justify-center gap-2 group"
+                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xl shadow-blue-200/50 transition-all active:scale-95 flex items-center justify-center gap-2 group mt-4"
                 >
-                    <Sparkles className="w-5 h-5 group-hover:animate-spin" />
-                    ابـدأ الـرحلـة
-                    <ArrowRight className="w-5 h-5" />
+                    {mode === 'login' ? 'دخول' : mode === 'register' ? 'إنشاء حساب' : 'استعادة'}
+                    {mode !== 'recover' && <ArrowRight className="w-5 h-5 group-hover:translate-x-[-4px] transition-transform" />}
                 </button>
             </form>
 
-            <p className="text-[10px] text-slate-300 text-center mt-8">
-                نسخة خالية من التعقيد، لتركز في صلاتك فقط.
-            </p>
+            <div className="flex justify-between items-center mt-6 text-xs font-bold text-slate-500">
+                {mode === 'login' && (
+                    <>
+                        <button onClick={() => setMode('register')} className="text-blue-600 hover:underline">حساب جديد</button>
+                        <button onClick={() => setMode('recover')} className="hover:text-slate-700">نسيت كلمة المرور؟</button>
+                    </>
+                )}
+                {(mode === 'register' || mode === 'recover') && (
+                    <button onClick={() => setMode('login')} className="w-full text-center text-blue-600 hover:underline">العودة لتسجيل الدخول</button>
+                )}
+            </div>
         </div>
       </div>
     </div>

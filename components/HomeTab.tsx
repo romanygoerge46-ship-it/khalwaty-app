@@ -1,15 +1,15 @@
+
 import React, { useEffect, useState } from 'react';
 import { AppState, DailyLog, BibleProgress, FeelingEntry } from '../types';
 import { NEW_TESTAMENT_BOOKS, DAILY_VERSES, PATRISTIC_QUOTES } from '../lib/data';
 import { 
   Flame, BookOpen, Sun, Moon, Star, Calendar, 
-  Smile, Plus, Minus, TrendingUp, CheckCircle, Clock, Lightbulb, CheckSquare, Square, X, Info, Copy, Quote, Heart
+  Smile, Plus, TrendingUp, CheckCircle, Clock, Lightbulb, CheckSquare, X, Copy, Quote, Heart, ArrowRight
 } from 'lucide-react';
-import { getDailySpiritualMessage } from '../lib/gemini';
-import { TODAY_ISO, calculateStreak } from '../lib/utils';
-// import PrayerReader from './PrayerReader'; // Removed to simplify per user request
+import { TODAY_ISO } from '../lib/utils';
 import FeelingsModal from './FeelingsModal';
 import FastingManager from './FastingManager';
+import BibleReader from './BibleReader';
 
 interface Props {
   state: AppState;
@@ -56,7 +56,6 @@ const CrownHistoryModal = ({ logs, streak, onClose }: { logs: Record<string, Dai
                         const log = logs[dateStr];
                         // Logic for "Crown Achieved" on that day: Matins + Compline + Bible
                         const achieved = log && log.prayers?.matins && log.prayers?.compline && log.bibleReadingDone;
-                        const isFuture = d > new Date(); // Shouldn't happen with reverse loop of past days but safety check
                         
                         return (
                             <div key={i} className={`aspect-square rounded-lg flex items-center justify-center text-xs font-bold border ${
@@ -89,6 +88,7 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
   const [showFeelings, setShowFeelings] = useState(false);
   const [fastingAlert, setFastingAlert] = useState<string | null>(null);
   const [showCrownHistory, setShowCrownHistory] = useState(false);
+  const [showBibleReader, setShowBibleReader] = useState(false);
 
   // Check if feeling selected today
   const todaysFeeling = state.feelingsHistory.find(f => f.date.startsWith(TODAY_ISO));
@@ -108,12 +108,12 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
     const hour = d.getHours();
     const day = d.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
     
-    // Friday Alert: Reminder for Friday Liturgy (Thursday night or Friday morning)
+    // Friday Alert: Reminder for Friday Liturgy (Thursday night until Friday 10 AM)
     if (day === 4 && hour >= 18) { // Thursday Night
       setFastingAlert(`تذكير: استعد لقداس غداً الجمعة. جهز قلبك.`);
     } 
-    else if (day === 5) { // Friday
-       setFastingAlert(`يوم الجمعة: تذكر حضور القداس اليوم إذا أمكن.`);
+    else if (day === 5 && hour < 10) { // Friday until 10 AM
+       setFastingAlert(`يوم الجمعة: تذكر حضور القداس اليوم.`);
     } else {
        setFastingAlert(null);
     }
@@ -158,35 +158,9 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
       alert("تم النسخ بنجاح");
   };
 
-  // Bible Chunk Logic
-  const handleReadBibleChunk = () => {
-    const currentVerse = state.stats.bibleProgress.lastReadVerse || 0;
-    const chunksize = 5;
-    let newVerse = currentVerse + chunksize;
-    let newChapter = state.stats.bibleProgress.currentChapter;
-    let newBookIndex = state.stats.bibleProgress.currentBookIndex;
-    let newTotalRead = state.stats.bibleProgress.totalChaptersRead;
-
-    const MOCK_VERSES_PER_CHAPTER = 20;
-
-    if (newVerse >= MOCK_VERSES_PER_CHAPTER) {
-       newVerse = 0;
-       newChapter++;
-       newTotalRead++; 
-       if (newChapter > currentBook.chapters) {
-          newChapter = 1;
-          newBookIndex++;
-          if (newBookIndex >= NEW_TESTAMENT_BOOKS.length) newBookIndex = 0; 
-       }
-    }
-
-    onUpdateBible({
-      lastReadVerse: newVerse,
-      currentChapter: newChapter,
-      currentBookIndex: newBookIndex,
-      totalChaptersRead: newTotalRead
-    });
-
+  // Bible Logic Handler
+  const handleBibleComplete = (newProgress: BibleProgress) => {
+    onUpdateBible(newProgress);
     if (!log.bibleReadingDone) {
         onUpdateLog(TODAY_ISO, { bibleReadingDone: true });
         onAddPoints(20);
@@ -207,27 +181,24 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       
-      {/* 1. Dashboard Banner / Header (Responsive) */}
+      {/* 1. Dashboard Banner */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-8 rounded-3xl shadow-xl shadow-blue-200/50 text-white relative overflow-hidden mb-8">
-         {/* Background Decoration */}
          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
          <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500 opacity-20 rounded-full -ml-10 -mb-10 blur-3xl"></div>
          
          <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-           
            <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-start">
-                {/* Left: Wreath (Daily Crown) */}
+                {/* Wreath */}
                 <div className="flex flex-col items-center cursor-pointer group" onClick={() => setShowCrownHistory(true)}>
                     <div className={`w-16 h-16 rounded-2xl border-2 flex items-center justify-center relative transition-all duration-700 ${isWreathLit ? 'border-amber-300 bg-amber-400/20 shadow-[0_0_30px_rgba(251,191,36,0.6)]' : 'border-white/20 bg-white/10 group-hover:bg-white/20'}`}>
                         <Flame className={`w-8 h-8 ${isWreathLit ? 'text-amber-300 fill-amber-300 animate-pulse' : 'text-blue-100'}`} />
                     </div>
-                    {/* Crown Day Label */}
                     <span className="text-[10px] text-blue-100 mt-2 font-bold px-3 py-1 bg-black/10 rounded-full border border-white/5">
                         يوم {state.stats.currentStreak + (isWreathLit ? 0 : 1)}
                     </span>
                 </div>
 
-                {/* Right: Spiritual Points */}
+                {/* Points */}
                 <div className="flex flex-col items-center">
                     <div className="flex items-center gap-1">
                         <span className="text-5xl font-bold font-mono tracking-tighter drop-shadow-sm">{state.stats.spiritualPoints}</span>
@@ -236,7 +207,7 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
                 </div>
            </div>
 
-           {/* Stats Row (Desktop: Horizontal, Mobile: Stacked below) */}
+           {/* Stats Row */}
            <div className="flex justify-between md:justify-end gap-4 md:gap-8 bg-white/10 rounded-2xl p-4 backdrop-blur-md border border-white/20 shadow-inner w-full md:w-auto">
                 <div className="text-center px-2">
                     <p className="text-[10px] text-blue-100 mb-1 opacity-70 font-bold">الاستمرارية</p>
@@ -255,7 +226,6 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
                     <p className="font-bold text-lg">{state.sacraments.liturgyAttendance.length}</p>
                 </div>
            </div>
-
          </div>
       </div>
 
@@ -266,34 +236,44 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
         <div className="space-y-6">
             
             {/* Feelings Reminder */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex items-center justify-between hover:shadow-md transition-shadow">
-                {todaysFeeling ? (
-                    <div className="flex items-center gap-3">
-                        <div className="text-3xl bg-blue-50 w-12 h-12 flex items-center justify-center rounded-full">
-                            {state.feelingsHistory.find(f => f.emotionId === todaysFeeling.emotionId)?.emotionId === 'happy' ? '😊' : '🙏'} 
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                    {todaysFeeling ? (
+                        <div className="flex items-center gap-3">
+                            <div className="text-3xl bg-blue-50 w-12 h-12 flex items-center justify-center rounded-full">
+                                {state.feelingsHistory.find(f => f.emotionId === todaysFeeling.emotionId)?.emotionId === 'happy' ? '😊' : '🙏'} 
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-400 font-bold">مشاعرك اليوم</p>
+                                <p className="text-slate-800 font-bold">{todaysFeeling.emotionLabel}</p>
+                            </div>
                         </div>
-                        <div>
-                        <p className="text-xs text-slate-400 font-bold">مشاعرك اليوم</p>
-                        <p className="text-slate-800 font-bold">{todaysFeeling.emotionLabel}</p>
+                    ) : (
+                        <div className="flex items-center gap-3">
+                            <div className="bg-slate-100 w-12 h-12 flex items-center justify-center rounded-full">
+                                <Smile className="w-6 h-6 text-slate-400" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-400 font-bold">لم تختر بعد</p>
+                                <p className="text-slate-800 font-bold">كيف تشعر اليوم؟</p>
+                            </div>
                         </div>
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-3">
-                        <div className="bg-slate-100 w-12 h-12 flex items-center justify-center rounded-full">
-                            <Smile className="w-6 h-6 text-slate-400" />
-                        </div>
-                        <div>
-                        <p className="text-xs text-slate-400 font-bold">لم تختر بعد</p>
-                        <p className="text-slate-800 font-bold">كيف تشعر اليوم؟</p>
-                        </div>
+                    )}
+                    <button 
+                        onClick={() => setShowFeelings(true)}
+                        className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold transition-colors"
+                    >
+                        {todaysFeeling ? 'تغيير' : 'اختيار'}
+                    </button>
+                </div>
+
+                {/* Show Verse if Feeling Selected */}
+                {todaysFeeling && (
+                    <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-2">
+                        <p className="text-sm text-blue-900 font-serif leading-relaxed text-center">"{todaysFeeling.verseText}"</p>
+                        <p className="text-[10px] text-blue-600 font-bold text-center mt-1">{todaysFeeling.verseRef}</p>
                     </div>
                 )}
-                <button 
-                    onClick={() => setShowFeelings(true)}
-                    className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold transition-colors"
-                >
-                    {todaysFeeling ? 'تغيير' : 'اختيار'}
-                </button>
             </div>
 
             {/* Daily Verse */}
@@ -387,7 +367,8 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
             )}
 
             {/* Jesus Prayer */}
-            <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm text-center hover:shadow-md transition-shadow">
+            <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm text-center hover:shadow-md transition-shadow relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500"></div>
                 <h3 className="font-bold text-slate-800 mb-4 flex items-center justify-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center"><Heart className="w-4 h-4 text-blue-500" /></div>
                     صلاة يسوع
@@ -399,34 +380,28 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
                     </p>
                 </div>
 
-                <div className="flex items-center justify-center gap-8 mb-6">
-                    <button 
-                    onClick={() => log.jesusPrayerCount > 0 && onUpdateLog(TODAY_ISO, { jesusPrayerCount: log.jesusPrayerCount - 1 })}
-                    className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-slate-200 transition-colors"
-                    >
-                    <Minus className="w-6 h-6" />
-                    </button>
-                    
-                    <div className="flex flex-col items-center w-16">
-                    <span className="text-4xl font-bold text-blue-600">{log.jesusPrayerCount}</span>
+                <div className="flex items-center justify-center gap-4 mb-6">
+                    {/* Only Add Button - No Minus */}
+                    <div className="flex flex-col items-center">
+                        <button
+                        onClick={() => {
+                            onUpdateLog(TODAY_ISO, { jesusPrayerCount: log.jesusPrayerCount + 1 });
+                            onAddPoints(1);
+                            if (log.jesusPrayerCount % 10 === 0) onEncourage(); // Encourage every 10
+                        }}
+                        className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg shadow-purple-200 flex items-center justify-center active:scale-95 transition-all hover:scale-105"
+                        >
+                            <Plus className="w-8 h-8" />
+                        </button>
+                        <span className="text-[10px] text-slate-400 mt-2 font-bold">اضغط للتكرار</span>
                     </div>
 
-                    <button
-                    onClick={() => {
-                        onUpdateLog(TODAY_ISO, { jesusPrayerCount: log.jesusPrayerCount + 1 });
-                        onAddPoints(1);
-                        if (log.jesusPrayerCount === 2) onEncourage(); // Encourage on reaching 3
-                    }}
-                    className="w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-center active:scale-95 transition-transform"
-                    >
-                    <Plus className="w-7 h-7" />
-                    </button>
-                </div>
-                
-                <div className="flex justify-center gap-1.5">
-                    {[...Array(3)].map((_, i) => (
-                        <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i < log.jesusPrayerCount ? 'bg-blue-500 w-8' : 'bg-slate-200 w-2'}`} />
-                    ))}
+                    <div className="flex flex-col items-center justify-center w-24 h-24 rounded-full border-4 border-slate-50 bg-white shadow-inner">
+                         <span className="text-3xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                             {log.jesusPrayerCount}
+                         </span>
+                         <span className="text-[9px] text-slate-400 font-bold">مرة اليوم</span>
+                    </div>
                 </div>
             </div>
 
@@ -506,15 +481,21 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
                 </div>
 
                 <button
-                    onClick={handleReadBibleChunk}
-                    disabled={log.bibleReadingDone}
+                    onClick={() => setShowBibleReader(true)}
                     className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
                     log.bibleReadingDone
-                        ? 'bg-green-100 text-green-700 cursor-default'
+                        ? 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
                         : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
                     }`}
                 >
-                    {log.bibleReadingDone ? "تمت قراءة الورد اليومي ✅" : "إتمام القراءة (+20)"}
+                    {log.bibleReadingDone ? (
+                        <>
+                            <CheckCircle className="w-5 h-5" />
+                            <span>تمت القراءة (تابع القراءة)</span>
+                        </>
+                    ) : (
+                        "إتمام القراءة (+20)"
+                    )}
                 </button>
             </div>
 
@@ -539,6 +520,17 @@ export default function HomeTab({ state, onUpdateLog, onUpdateBible, onUpdateMes
              onEncourage();
           }}
           history={state.feelingsHistory || []}
+        />
+      )}
+
+      {showBibleReader && (
+        <BibleReader
+            progress={state.stats.bibleProgress}
+            onClose={() => setShowBibleReader(false)}
+            onComplete={handleBibleComplete}
+            touchedMeText={log.touchedMe}
+            onUpdateTouchedMe={(text) => onUpdateLog(TODAY_ISO, { touchedMe: text })}
+            isCompletedToday={log.bibleReadingDone}
         />
       )}
     </div>

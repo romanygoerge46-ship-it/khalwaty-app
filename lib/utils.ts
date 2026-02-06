@@ -1,11 +1,12 @@
+
 import { AppState, DailyLog, SacramentsLog, UserStats, DonationRequest, AppNotification } from '../types';
 
 export const TODAY_ISO = new Date().toISOString().split('T')[0];
 
-const USERS_KEY = 'ruhi_users_registry';
+const USERS_KEY = 'ruhi_users_registry_v2'; // Updated key for new auth structure
 const DATA_PREFIX = 'ruhi_data_';
-const SHARED_ADMIN_DATA_KEY = 'ruhi_admin_shared_data'; // Simulating backend DB
-const INBOX_PREFIX = 'ruhi_inbox_'; // New key for user messages
+const SHARED_ADMIN_DATA_KEY = 'ruhi_admin_shared_data'; 
+const INBOX_PREFIX = 'ruhi_inbox_';
 
 const INITIAL_STATE: AppState = {
   profile: {
@@ -40,6 +41,7 @@ const INITIAL_STATE: AppState = {
   },
   dailyMessage: null,
   hazezezHistory: [],
+  meditationsPin: null,
   feelingsHistory: [],
   adsRemoved: false,
   donationRequests: [],
@@ -49,17 +51,20 @@ const INITIAL_STATE: AppState = {
 
 // --- Auth Helpers ---
 
-export const registerUser = (username: string): { success: boolean, message: string } => {
+export const registerUser = (username: string, password?: string, recoveryAnswer?: string): { success: boolean, message: string } => {
   try {
     const registry = JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
     
-    // In simplified mode, if user exists, we just treat it as logging back in.
     if (registry[username]) {
-      return { success: true, message: "تم تسجيل الدخول" };
+      return { success: false, message: "اسم المستخدم موجود بالفعل" };
     }
     
-    // Register new user
-    registry[username] = { joinDate: new Date().toISOString() }; 
+    // Store Auth Data separately from App Data
+    registry[username] = { 
+        joinDate: new Date().toISOString(),
+        password: password || '0000', // Default if skipped (legacy)
+        recoveryAnswer: recoveryAnswer || 'saint' // Simple recovery answer
+    }; 
     localStorage.setItem(USERS_KEY, JSON.stringify(registry));
     
     // Welcome Notification
@@ -67,7 +72,7 @@ export const registerUser = (username: string): { success: boolean, message: str
       id: Date.now().toString(),
       type: 'system',
       title: 'أهلاً بك في خلوتي',
-      message: 'نتمنى لك رحلة روحية مباركة. ابدأ يومك بالصلاة وقراءة الإنجيل.',
+      message: 'نتمنى لك رحلة روحية مباركة. بياناتك محفوظة بأمان.',
       date: new Date().toISOString(),
       read: false
     });
@@ -78,13 +83,17 @@ export const registerUser = (username: string): { success: boolean, message: str
   }
 };
 
-export const loginUser = (username: string): { success: boolean, message: string } => {
+export const loginUser = (username: string, password?: string): { success: boolean, message: string } => {
   try {
     const registry = JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
-    // If not in registry, add them (auto-register on login for simple flow)
-    if (!registry[username]) {
-       registry[username] = { joinDate: new Date().toISOString() };
-       localStorage.setItem(USERS_KEY, JSON.stringify(registry));
+    const user = registry[username];
+
+    if (!user) {
+        return { success: false, message: "اسم المستخدم غير موجود" };
+    }
+
+    if (user.password && user.password !== password) {
+        return { success: false, message: "كلمة المرور غير صحيحة" };
     }
     
     return { success: true, message: "تم الدخول بنجاح" };
@@ -93,9 +102,17 @@ export const loginUser = (username: string): { success: boolean, message: string
   }
 };
 
-export const verifyPassword = (username: string, password: string): boolean => {
-    // Deprecated
-    return true;
+export const recoverPassword = (username: string, answer: string): { success: boolean, password?: string, message: string } => {
+    const registry = JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
+    const user = registry[username];
+    
+    if (!user) return { success: false, message: "المستخدم غير موجود" };
+    
+    // Simple check (case insensitive)
+    if (user.recoveryAnswer && user.recoveryAnswer.toLowerCase() === answer.toLowerCase()) {
+        return { success: true, password: user.password, message: "تم التحقق" };
+    }
+    return { success: false, message: "إجابة سؤال الأمان غير صحيحة" };
 };
 
 export const getAllUsers = (): string[] => {
@@ -148,9 +165,9 @@ export const loadState = (username?: string | null): AppState => {
     // Get Join Date from Registry if possible
     const registry = JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
     const userRecord = registry[username];
-    const actualJoinDate = (typeof userRecord === 'object' && userRecord.joinDate) 
+    const actualJoinDate = (userRecord && userRecord.joinDate) 
         ? userRecord.joinDate 
-        : new Date().toISOString(); // Default for legacy users
+        : new Date().toISOString(); 
 
     const sharedData = JSON.parse(localStorage.getItem(SHARED_ADMIN_DATA_KEY) || '{"requests": [], "support": []}');
     
@@ -187,6 +204,7 @@ export const loadState = (username?: string | null): AppState => {
     
     // Init arrays and profile if missing (Migration)
     if (!parsed.hazezezHistory) parsed.hazezezHistory = [];
+    if (!parsed.meditationsPin) parsed.meditationsPin = null; // Ensure field exists
     if (!parsed.feelingsHistory) parsed.feelingsHistory = [];
     if (!parsed.notifications) parsed.notifications = [];
     if (!parsed.profile) {
