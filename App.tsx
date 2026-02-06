@@ -15,7 +15,7 @@ import NotificationsModal from './components/NotificationsModal';
 import SupportModal from './components/SupportModal';
 import { 
   Home, ScrollText, Cloud, Heart, X, Copy, CheckCircle, 
-  Loader2, LogOut, ShieldCheck, AlertCircle, Bell, MessageCircle, User 
+  Loader2, LogOut, ShieldCheck, AlertCircle, Bell, MessageCircle, User, Globe 
 } from 'lucide-react';
 
 // Modern, Minimalist Bible Icon
@@ -247,112 +247,25 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-[Cairo] antialiased leading-relaxed tracking-wide selection:bg-blue-100">
-      <div className="max-w-md mx-auto min-h-screen bg-[#f8fafc] relative flex flex-col shadow-2xl border-x border-slate-100">
-        
-        {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl px-6 py-4 border-b border-slate-100 flex justify-between items-center transition-all">
-          <div className="flex items-center gap-4">
-            <button onDoubleClick={() => setShowAdminDashboard(!showAdminDashboard)}>
-               <HolyBibleIcon />
-            </button>
-            <div className="flex flex-col">
-              <h1 className="text-2xl font-bold text-slate-800 leading-none tracking-tight">خلوتي</h1>
-              {/* Use Display Name if available */}
-              <span className="text-[11px] text-slate-400 font-bold mt-1">مرحباً، {state.profile.displayName || currentUser}</span>
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-[Cairo] antialiased leading-relaxed tracking-wide selection:bg-blue-100 flex flex-col">
+      
+      {/* Header (Desktop & Mobile) */}
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-100 shadow-sm transition-all w-full">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <button onDoubleClick={() => setShowAdminDashboard(!showAdminDashboard)} className="hover:scale-105 transition-transform">
+                 <HolyBibleIcon />
+              </button>
+              <div className="flex flex-col">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-800 leading-none tracking-tight">خلوتي</h1>
+                {/* Use Display Name if available */}
+                <span className="text-[10px] sm:text-xs text-slate-400 font-bold mt-1">مرحباً، {state.profile.displayName || currentUser}</span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            
-            <button 
-              onClick={() => setShowNotifications(true)}
-              className="p-2 text-slate-500 hover:bg-slate-100 rounded-full relative"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadNotifications > 0 && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
-              )}
-            </button>
 
-            <button
-               onClick={() => setShowSupport(true)}
-               className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"
-            >
-               <MessageCircle className="w-5 h-5" />
-            </button>
-
-            <button 
-              onClick={() => setShowAdminDashboard(!showAdminDashboard)}
-              className={`p-2 rounded-full transition-colors relative ${showAdminDashboard ? 'bg-blue-100 text-blue-600' : 'text-slate-300 hover:text-slate-500'}`}
-            >
-              <ShieldCheck className="w-5 h-5" />
-              {hasAdminAlerts && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
-              )}
-            </button>
-            
-          </div>
-        </header>
-
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto bg-[#f8fafc]">
-           <div className="min-h-full">
-             {renderContent()}
-           </div>
-        </main>
-
-        {/* Ad Banner - Hide on Admin or if Ads Removed */}
-        {!state.adsRemoved && !showAdminDashboard && (
-          <div className="m-4 z-30 relative animate-in slide-in-from-bottom duration-500">
-            {state.lastDonationStatus?.status === 'pending' ? (
-                <div className="bg-orange-50 p-4 rounded-2xl border border-orange-200 shadow-sm">
-                    <div className="flex items-start gap-3">
-                        <Loader2 className="w-5 h-5 text-orange-500 animate-spin mt-1" />
-                        <div>
-                            <p className="font-bold text-orange-800 text-sm">طلبك قيد المراجعة</p>
-                        </div>
-                    </div>
-                </div>
-            ) : state.lastDonationStatus?.status === 'rejected' ? (
-                <div className="bg-red-50 p-4 rounded-2xl border border-red-200 shadow-sm">
-                    <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-500 mt-1" />
-                        <div className="flex-1">
-                            <p className="font-bold text-red-800 text-sm">تم رفض الطلب</p>
-                            <button onClick={() => setShowDonation(true)} className="text-xs font-bold text-red-600 underline mt-2">
-                                حاول مرة أخرى
-                            </button>
-                        </div>
-                        <button onClick={() => setState(s => ({...s, lastDonationStatus: undefined}))}>
-                             <X className="w-4 h-4 text-red-400" />
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-xl flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-amber-400 rounded-xl shrink-0 flex items-center justify-center shadow-lg shadow-amber-900/20">
-                        <span className="text-amber-900 font-black text-xs">AD</span>
-                    </div>
-                    <div>
-                        <p className="font-bold text-sm">إعلان ممول</p>
-                        <button onClick={() => setShowDonation(true)} className="text-[11px] text-blue-300 hover:text-blue-200 underline mt-0.5">
-                        تخلص من الإعلانات نهائياً
-                        </button>
-                    </div>
-                    </div>
-                    <button onClick={() => setShowDonation(true)} className="bg-white/10 p-2 rounded-full hover:bg-white/20">
-                       <X className="w-4 h-4" />
-                    </button>
-                </div>
-            )}
-          </div>
-        )}
-
-        {/* Bottom Navigation */}
-        {!showAdminDashboard && (
-            <nav className="sticky bottom-0 z-40 bg-white border-t border-slate-100 pb-safe shadow-[0_-5px_10px_rgba(0,0,0,0.02)]">
-                <div className="flex justify-around items-center px-2 py-3">
+            {/* Desktop Nav */}
+            {!showAdminDashboard && (
+                <nav className="hidden md:flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
                     {tabs.map(tab => {
                         const isActive = activeTab === tab.id;
                         const Icon = tab.icon;
@@ -360,45 +273,162 @@ export default function App() {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 w-16 active:scale-95 ${
-                                    isActive ? 'text-blue-600 bg-blue-50 scale-105' : 'text-slate-400 hover:text-slate-600'
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-bold ${
+                                    isActive ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
                                 }`}
                             >
-                                <Icon className={`w-6 h-6 ${isActive ? 'fill-blue-600/20' : ''}`} />
-                                <span className="text-[10px] font-bold">{tab.label}</span>
+                                <Icon className="w-4 h-4" />
+                                {tab.label}
                             </button>
                         )
                     })}
-                </div>
-            </nav>
-        )}
+                </nav>
+             )}
 
-        {/* Notifications Modal */}
-        {showNotifications && (
-            <NotificationsModal 
-                notifications={state.notifications} 
-                onClose={() => setShowNotifications(false)}
-                onMarkRead={handleMarkRead}
-            />
-        )}
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setShowNotifications(true)}
+                className="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 rounded-full relative transition-colors"
+              >
+                <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                )}
+              </button>
 
-        {/* Support Modal */}
-        {showSupport && currentUser && (
-            <SupportModal 
-                username={currentUser} 
-                onClose={() => setShowSupport(false)}
-            />
-        )}
+              <button
+                 onClick={() => setShowSupport(true)}
+                 className="p-2 sm:p-2.5 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                 <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
 
-        {/* Toast Notification */}
-        {toastMessage && (
-            <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl z-[100] animate-in fade-in slide-in-from-top-4 flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-400" />
-                <span className="text-sm font-bold">{toastMessage}</span>
+              <button 
+                onClick={() => setShowAdminDashboard(!showAdminDashboard)}
+                className={`p-2 sm:p-2.5 rounded-full transition-colors relative ${showAdminDashboard ? 'bg-blue-100 text-blue-600' : 'text-slate-300 hover:text-slate-500'}`}
+              >
+                <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+                {hasAdminAlerts && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                )}
+              </button>
             </div>
-        )}
+         </div>
+      </header>
 
-      </div>
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+         <div className="min-h-full">
+           {renderContent()}
+         </div>
+      </main>
+
+      {/* Footer (Desktop) */}
+      <footer className="hidden md:block py-6 text-center text-slate-400 text-sm border-t border-slate-100 mt-auto bg-white">
+          <div className="flex items-center justify-center gap-2 mb-2">
+             <Globe className="w-4 h-4" />
+             <span className="font-bold">خلوتي - رفيقك الروحي</span>
+          </div>
+          <p>© {new Date().getFullYear()} جميع الحقوق محفوظة.</p>
+      </footer>
+
+      {/* Ad Banner - Hide on Admin or if Ads Removed */}
+      {!state.adsRemoved && !showAdminDashboard && (
+        <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-30 animate-in slide-in-from-right duration-500 max-w-xs md:max-w-sm">
+          {state.lastDonationStatus?.status === 'pending' ? (
+              <div className="bg-orange-50 p-4 rounded-2xl border border-orange-200 shadow-lg">
+                  <div className="flex items-start gap-3">
+                      <Loader2 className="w-5 h-5 text-orange-500 animate-spin mt-1" />
+                      <div>
+                          <p className="font-bold text-orange-800 text-sm">طلبك قيد المراجعة</p>
+                      </div>
+                  </div>
+              </div>
+          ) : state.lastDonationStatus?.status === 'rejected' ? (
+              <div className="bg-red-50 p-4 rounded-2xl border border-red-200 shadow-lg">
+                  <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-500 mt-1" />
+                      <div className="flex-1">
+                          <p className="font-bold text-red-800 text-sm">تم رفض الطلب</p>
+                          <button onClick={() => setShowDonation(true)} className="text-xs font-bold text-red-600 underline mt-2">
+                              حاول مرة أخرى
+                          </button>
+                      </div>
+                      <button onClick={() => setState(s => ({...s, lastDonationStatus: undefined}))}>
+                           <X className="w-4 h-4 text-red-400" />
+                      </button>
+                  </div>
+              </div>
+          ) : (
+              <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-xl flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-amber-400 rounded-xl shrink-0 flex items-center justify-center shadow-lg shadow-amber-900/20">
+                      <span className="text-amber-900 font-black text-xs">AD</span>
+                  </div>
+                  <div>
+                      <p className="font-bold text-sm">إعلان ممول</p>
+                      <button onClick={() => setShowDonation(true)} className="text-[11px] text-blue-300 hover:text-blue-200 underline mt-0.5">
+                      تخلص من الإعلانات نهائياً
+                      </button>
+                  </div>
+                  </div>
+                  <button onClick={() => setShowDonation(true)} className="bg-white/10 p-2 rounded-full hover:bg-white/20">
+                     <X className="w-4 h-4" />
+                  </button>
+              </div>
+          )}
+        </div>
+      )}
+
+      {/* Bottom Navigation (Mobile Only) */}
+      {!showAdminDashboard && (
+          <nav className="md:hidden sticky bottom-0 z-40 bg-white border-t border-slate-100 pb-safe shadow-[0_-5px_10px_rgba(0,0,0,0.02)]">
+              <div className="flex justify-around items-center px-2 py-3">
+                  {tabs.map(tab => {
+                      const isActive = activeTab === tab.id;
+                      const Icon = tab.icon;
+                      return (
+                          <button
+                              key={tab.id}
+                              onClick={() => setActiveTab(tab.id)}
+                              className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 w-16 active:scale-95 ${
+                                  isActive ? 'text-blue-600 bg-blue-50 scale-105' : 'text-slate-400 hover:text-slate-600'
+                              }`}
+                          >
+                              <Icon className={`w-6 h-6 ${isActive ? 'fill-blue-600/20' : ''}`} />
+                              <span className="text-[10px] font-bold">{tab.label}</span>
+                          </button>
+                      )
+                  })}
+              </div>
+          </nav>
+      )}
+
+      {/* Notifications Modal */}
+      {showNotifications && (
+          <NotificationsModal 
+              notifications={state.notifications} 
+              onClose={() => setShowNotifications(false)}
+              onMarkRead={handleMarkRead}
+          />
+      )}
+
+      {/* Support Modal */}
+      {showSupport && currentUser && (
+          <SupportModal 
+              username={currentUser} 
+              onClose={() => setShowSupport(false)}
+          />
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+          <div className="fixed top-24 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl z-[100] animate-in fade-in slide-in-from-top-4 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-400" />
+              <span className="text-sm font-bold">{toastMessage}</span>
+          </div>
+      )}
+
     </div>
   );
 }
